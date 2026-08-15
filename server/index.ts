@@ -212,8 +212,8 @@ socket.on(
     }, 3000);
   });
 });
-httpServer.listen(PORT, () => {
+httpServer.listen(PORT, "0.0.0.0", () => {
   console.log(
-    `Socket.IO server listening on http://localhost:${PORT}`,
+    `Socket.IO server listening on http://0.0.0.0:${PORT}`,
   );
 });
