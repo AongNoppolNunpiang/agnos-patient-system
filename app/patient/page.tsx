@@ -157,6 +157,7 @@ export default function PatientPage() {
   const [isSocketConnected, setIsSocketConnected] = useState(false);
   const [connectionStatus, setConnectionStatus] =
     useState<ConnectionState>("connecting");
+  const [submitError, setSubmitError] = useState("");
 
   useEffect(() => {
   function handleConnect() {
@@ -213,6 +214,7 @@ socket.on("connect_error", handleConnectError);
       return remainingErrors;
     });
     setIsSubmitted(false);
+    setSubmitError("");
   }
 
   function updateEmergencyContact(
@@ -231,17 +233,29 @@ socket.on("connect_error", handleConnectError);
   }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  event.preventDefault();
 
-    const validationErrors = validatePatient(patient);
-    setErrors(validationErrors);
+  const validationErrors = validatePatient(patient);
+  setErrors(validationErrors);
+  setSubmitError("");
 
-    const isValid = Object.keys(validationErrors).length === 0;
-    setIsSubmitted(isValid);
+  const isValid = Object.keys(validationErrors).length === 0;
 
-    if (isValid && isSocketConnected) {
-      socket.emit("patient:submit", patient);
-    }
+  if (!isValid) {
+    setIsSubmitted(false);
+    return;
+  }
+
+  if (!isSocketConnected) {
+    setIsSubmitted(false);
+    setSubmitError(
+      "Your information could not be submitted because the connection is unavailable. Please wait for the connection to return and try again.",
+    );
+    return;
+  }
+
+  socket.emit("patient:submit", patient);
+  setIsSubmitted(true);
   }
 
   return (
@@ -268,17 +282,20 @@ socket.on("connect_error", handleConnectError);
           onSubmit={handleSubmit}
           className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:p-8"
         >
-          {isSubmitted ? (
+          {submitError ? (
             <div
-              role="status"
-              aria-live="polite"
-              className="mb-8 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800"
+              role="alert"
+              aria-live="assertive"
+              className="mb-8 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800"
             >
-              Your information has been submitted successfully.
+              {submitError}
             </div>
           ) : null}
-
-          <div className="space-y-8">
+          <fieldset
+  disabled={isSubmitted}
+  className="space-y-8 disabled:cursor-not-allowed"
+>
+            
             <FormSection id="personal-information" title="Personal information">
               <div className="grid gap-5 md:grid-cols-2">
                 <FormField
@@ -569,18 +586,62 @@ socket.on("connect_error", handleConnectError);
                 </FormField>
               </div>
             </FormSection>
-          </div>
+          </fieldset>
 
           <div className="mt-8 flex justify-end border-t border-slate-200 pt-6">
             <button
-              type="submit"
-              className="w-full rounded-lg bg-sky-700 px-5 py-3 text-sm font-semibold text-white transition hover:bg-sky-800 focus:outline-none focus:ring-3 focus:ring-sky-200 sm:w-auto"
-            >
-              Submit information
-            </button>
+  type="submit"
+  disabled={isSubmitted}
+  className="w-full rounded-lg bg-sky-700 px-5 py-3 text-sm font-semibold text-white transition hover:bg-sky-800 focus:outline-none focus:ring-3 focus:ring-sky-200 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+>
+  {isSubmitted ? "Submitted" : "Submit information"}
+</button>
           </div>
         </form>
       </div>
+      {isSubmitted ? (
+  <div
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="submitted-title"
+    className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 px-4"
+  >
+    <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl sm:p-8">
+      <div className="flex items-start gap-4">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            className="h-5 w-5"
+            aria-hidden="true"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="m5 12 4 4L19 6"
+            />
+          </svg>
+        </div>
+
+        <div>
+          <h2
+            id="submitted-title"
+            className="text-lg font-semibold text-slate-900"
+          >
+            Information submitted
+          </h2>
+
+          <p className="mt-2 text-sm leading-6 text-slate-600">
+            Your information has been submitted successfully.
+            You can no longer edit this form.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+) : null}
     </main>
   );
 }

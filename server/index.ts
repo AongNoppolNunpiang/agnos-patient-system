@@ -13,7 +13,10 @@ const io = new Server(httpServer, {
 });
 
 let patientSocketId: string | null = null;
+
 let currentPatient: Patient | null = null;
+let lastPatient: Patient | null = null;
+
 let currentStatus: "inactive" | "actively-filling" | "submitted" =
   "inactive";
 
@@ -22,6 +25,7 @@ io.on("connection", (socket) => {
 
   socket.on("patient:join", () => {
     patientSocketId = socket.id;
+    currentPatient = null;
     currentStatus = "actively-filling";
 
     console.log(`Patient joined: ${socket.id}`);
@@ -61,16 +65,20 @@ io.on("connection", (socket) => {
   });
 
   socket.on("staff:join", () => {
-    console.log(`Staff joined: ${socket.id}`);
+  console.log(`Staff joined: ${socket.id}`);
 
-    if (currentPatient) {
-      socket.emit("patient:update", currentPatient);
-    }
+  if (currentPatient) {
+    console.log("Sending current patient to staff:", currentPatient);
+    socket.emit("patient:update", currentPatient);
+  }
 
-    socket.emit("patient:status", {
-      status: patientSocketId ? currentStatus : "inactive",
-    });
+  socket.emit("patient:status", {
+    status: patientSocketId ? currentStatus : "inactive",
   });
+
+  console.log("Sending last patient to staff:", lastPatient);
+  socket.emit("patient:last", lastPatient);
+});
 
   socket.on("disconnect", (reason) => {
     console.log(
@@ -78,13 +86,23 @@ io.on("connection", (socket) => {
     );
 
     if (socket.id === patientSocketId) {
-      patientSocketId = null;
-      currentStatus = "inactive";
+  if (currentPatient) {
+  lastPatient = currentPatient;
+  console.log("Saved last patient:", lastPatient);
+}
 
-      io.emit("patient:status", {
-        status: currentStatus,
-      });
-    }
+patientSocketId = null;
+currentPatient = null;
+currentStatus = "inactive";
+
+io.emit("patient:status", {
+  status: currentStatus,
+});
+
+io.emit("patient:current", null);
+
+io.emit("patient:last", lastPatient);
+}
   });
 });
 

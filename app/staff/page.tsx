@@ -17,24 +17,6 @@ import {
   type ConnectionState,
 } from "../../components/connection-status";
 
-const initialPatient: Patient = {
-  firstName: "",
-  middleName: "",
-  lastName: "",
-  dateOfBirth: "",
-  gender: "",
-  phoneNumber: "",
-  email: "",
-  address: "",
-  preferredLanguage: "",
-  nationality: "",
-  emergencyContact: {
-    name: "",
-    relationship: "",
-  },
-  religion: "",
-};
-
 const initialStatus: PatientStatusType = "inactive";
 
 function formatDate(date: string) {
@@ -60,129 +42,162 @@ function formatGender(gender: string) {
 }
 
 export default function StaffPage() {
-  const [patient, setPatient] = useState<Patient>(initialPatient);
-  const [status, setStatus] = useState<PatientStatusType>(initialStatus);
+  const [currentPatient, setCurrentPatient] = useState<Patient | null>(null);
+  const [lastPatient, setLastPatient] = useState<Patient | null>(null);
+  const [viewingLastPatient, setViewingLastPatient] = useState(false);
+
+  const [status, setStatus] =
+    useState<PatientStatusType>(initialStatus);
+
   const [connectionStatus, setConnectionStatus] =
-  useState<ConnectionState>("connecting");
+    useState<ConnectionState>("connecting");
+
   useEffect(() => {
-  const handleConnect = () => {
-    setConnectionStatus("connected");
-    socket.emit("staff:join");
-  };
+    const handleConnect = () => {
+      setConnectionStatus("connected");
+      socket.emit("staff:join");
+    };
 
-  const handleDisconnect = () => {
-    setConnectionStatus("disconnected");
-  };
+    const handleDisconnect = () => {
+      setConnectionStatus("disconnected");
+    };
 
-  const handleConnectError = () => {
-    setConnectionStatus("disconnected");
-  };
+    const handleConnectError = () => {
+      setConnectionStatus("disconnected");
+    };
 
-  const handlePatientUpdate = (updatedPatient: Patient) => {
-    setPatient(updatedPatient);
-  };
+    const handlePatientUpdate = (updatedPatient: Patient) => {
+      setCurrentPatient(updatedPatient);
+    };
 
-  const handlePatientStatus = ({
-    status: nextStatus,
-  }: {
-    status: PatientStatusType;
-  }) => {
-    setStatus(nextStatus);
-  };
+    const handleLastPatient = (last: Patient | null) => {
+      setLastPatient(last);
+    };
 
-  socket.on("patient:update", handlePatientUpdate);
-  socket.on("patient:status", handlePatientStatus);
-  socket.on("connect", handleConnect);
-  socket.on("disconnect", handleDisconnect);
-  socket.on("connect_error", handleConnectError);
+    const handleCurrentPatient = (current: Patient | null) => {
+      setCurrentPatient(current);
+      setViewingLastPatient(false);
+    };
 
-  if (socket.connected) {
-    handleConnect();
-  } else {
-    socket.connect();
-  }
+    const handlePatientStatus = ({
+      status: nextStatus,
+    }: {
+      status: PatientStatusType;
+    }) => {
+      setStatus(nextStatus);
+    };
 
-  return () => {
-    socket.off("patient:update", handlePatientUpdate);
-    socket.off("patient:status", handlePatientStatus);
-    socket.off("connect", handleConnect);
-    socket.off("disconnect", handleDisconnect);
-    socket.off("connect_error", handleConnectError);
-    socket.disconnect();
-  };
-}, []);
+    socket.on("patient:update", handlePatientUpdate);
+    socket.on("patient:status", handlePatientStatus);
+    socket.on("patient:last", handleLastPatient);
+    socket.on("patient:current", handleCurrentPatient);
+    socket.on("connect", handleConnect);
+    socket.on("disconnect", handleDisconnect);
+    socket.on("connect_error", handleConnectError);
+
+    if (socket.connected) {
+      handleConnect();
+    } else {
+      socket.connect();
+    }
+
+    return () => {
+      socket.off("patient:update", handlePatientUpdate);
+      socket.off("patient:status", handlePatientStatus);
+      socket.off("patient:last", handleLastPatient);
+      socket.off("patient:current", handleCurrentPatient);
+      socket.off("connect", handleConnect);
+      socket.off("disconnect", handleDisconnect);
+      socket.off("connect_error", handleConnectError);
+      socket.disconnect();
+    };
+  }, []);
+
+  const displayedPatient = viewingLastPatient
+    ? lastPatient
+    : currentPatient;
 
   const personalInformation = useMemo<InformationItem[]>(
     () => [
-      { label: "First name", value: patient.firstName },
-      { label: "Middle name", value: patient.middleName },
-      { label: "Last name", value: patient.lastName },
+      {
+        label: "First name",
+        value: displayedPatient?.firstName,
+      },
+      {
+        label: "Middle name",
+        value: displayedPatient?.middleName,
+      },
+      {
+        label: "Last name",
+        value: displayedPatient?.lastName,
+      },
       {
         label: "Date of birth",
-        value: formatDate(patient.dateOfBirth),
+        value: formatDate(displayedPatient?.dateOfBirth ?? ""),
       },
       {
         label: "Gender",
-        value: formatGender(patient.gender),
+        value: formatGender(displayedPatient?.gender ?? ""),
       },
     ],
-    [patient],
+    [displayedPatient],
   );
 
   const contactInformation = useMemo<InformationItem[]>(
     () => [
       {
         label: "Phone number",
-        value: patient.phoneNumber,
+        value: displayedPatient?.phoneNumber,
       },
       {
         label: "Email",
-        value: patient.email,
+        value: displayedPatient?.email,
       },
       {
         label: "Address",
-        value: patient.address,
+        value: displayedPatient?.address,
         className: "md:col-span-2",
       },
     ],
-    [patient],
+    [displayedPatient],
   );
 
   const additionalInformation = useMemo<InformationItem[]>(
     () => [
       {
         label: "Preferred language",
-        value: patient.preferredLanguage,
+        value: displayedPatient?.preferredLanguage,
       },
       {
         label: "Nationality",
-        value: patient.nationality,
+        value: displayedPatient?.nationality,
       },
       {
         label: "Religion",
-        value: patient.religion,
+        value: displayedPatient?.religion,
       },
     ],
-    [patient],
+    [displayedPatient],
   );
 
   const emergencyContact = useMemo<InformationItem[]>(
     () => [
       {
         label: "Name",
-        value: patient.emergencyContact?.name,
+        value: displayedPatient?.emergencyContact?.name,
       },
       {
         label: "Relationship",
-        value: patient.emergencyContact?.relationship,
+        value: displayedPatient?.emergencyContact?.relationship,
       },
     ],
-    [patient],
+    [displayedPatient],
   );
 
   const patientName =
-    [patient.firstName, patient.lastName].filter(Boolean).join(" ") ||
-    "No patient connected";
+    [displayedPatient?.firstName, displayedPatient?.lastName]
+      .filter(Boolean)
+      .join(" ") || "No patient connected";
 
   return (
     <main className="min-h-screen bg-slate-50 px-4 py-8 sm:px-6 lg:px-8 lg:py-12">
@@ -199,9 +214,10 @@ export default function StaffPage() {
           <p className="mt-3 max-w-2xl text-base leading-7 text-slate-600">
             Review the latest patient information. This view is read-only.
           </p>
+
           <div className="mt-3">
-  <ConnectionStatus status={connectionStatus} />
-</div>
+            <ConnectionStatus status={connectionStatus} />
+          </div>
         </header>
 
         <section
@@ -214,7 +230,9 @@ export default function StaffPage() {
                 id="patient-status-heading"
                 className="text-lg font-semibold text-slate-900"
               >
-                Current patient status
+                {viewingLastPatient
+                  ? "Last patient information"
+                  : "Current patient status"}
               </h2>
 
               <p className="mt-1 text-sm text-slate-600">
@@ -222,36 +240,70 @@ export default function StaffPage() {
               </p>
             </div>
 
-            <PatientStatus status={status} />
+            {viewingLastPatient ? (
+              <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
+                <p className="text-sm font-semibold text-slate-700">
+                  Previous patient
+                </p>
+
+                <p className="mt-0.5 text-xs text-slate-500">
+                  This is the most recently completed patient session.
+                </p>
+              </div>
+            ) : (
+              <PatientStatus status={status} />
+            )}
           </div>
         </section>
 
-        <div className="mt-6 space-y-6">
-          <PatientInformationSection
-            id="personal-information"
-            title="Personal information"
-            items={personalInformation}
-          />
+        {!currentPatient && lastPatient && !viewingLastPatient ? (
+          <button
+            type="button"
+            onClick={() => setViewingLastPatient(true)}
+            className="mt-4 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+          >
+            View last patient information
+          </button>
+        ) : null}
 
-          <PatientInformationSection
-            id="contact-information"
-            title="Contact information"
-            items={contactInformation}
-          />
+        {viewingLastPatient ? (
+          <button
+            type="button"
+            onClick={() => setViewingLastPatient(false)}
+            className="mt-4 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+          >
+            Back to current patient
+          </button>
+        ) : null}
 
-          <PatientInformationSection
-            id="additional-information"
-            title="Additional information"
-            items={additionalInformation}
-          />
+        {displayedPatient ? (
+          <div className="mt-6 space-y-6">
+            <PatientInformationSection
+              id="personal-information"
+              title="Personal information"
+              items={personalInformation}
+            />
 
-          <PatientInformationSection
-            id="emergency-contact"
-            title="Emergency contact"
-            description="Optional contact details provided by the patient."
-            items={emergencyContact}
-          />
-        </div>
+            <PatientInformationSection
+              id="contact-information"
+              title="Contact information"
+              items={contactInformation}
+            />
+
+            <PatientInformationSection
+              id="additional-information"
+              title="Additional information"
+              items={additionalInformation}
+            />
+
+            <PatientInformationSection
+              id="emergency-contact"
+              title="Emergency contact"
+              description="Optional contact details provided by the patient."
+              items={emergencyContact}
+            />
+          </div>
+        ) : null}
       </div>
     </main>
   );
