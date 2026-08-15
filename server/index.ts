@@ -13,6 +13,7 @@ const io = new Server(httpServer, {
 });
 
 let patientSocketId: string | null = null;
+let patientSessionId: string | null = null;
 
 let currentPatient: Patient | null = null;
 let lastPatient: Patient | null = null;
@@ -20,20 +21,60 @@ let lastPatient: Patient | null = null;
 let currentStatus: "inactive" | "actively-filling" | "submitted" =
   "inactive";
 
+let disconnectTimer: NodeJS.Timeout | null = null;
+
 io.on("connection", (socket) => {
   console.log(`Socket client connected: ${socket.id}`);
 
-  socket.on("patient:join", () => {
-    patientSocketId = socket.id;
-    currentPatient = null;
-    currentStatus = "actively-filling";
+  socket.on(
+    "patient:join",
+    (sessionId: string) => {
+      // Cancel pending disconnect from a page refresh.
+      if (disconnectTimer) {
+        clearTimeout(disconnectTimer);
+        disconnectTimer = null;
+      }
 
-    console.log(`Patient joined: ${socket.id}`);
+      const isSamePatientSession =
+        patientSessionId !== null &&
+        patientSessionId === sessionId &&
+        currentPatient !== null;
 
-    io.emit("patient:status", {
-      status: currentStatus,
-    });
-  });
+      patientSocketId = socket.id;
+      patientSessionId = sessionId;
+
+      console.log(`Patient joined: ${socket.id}`);
+      console.log(`Patient session: ${sessionId}`);
+
+      if (isSamePatientSession) {
+        console.log("Restoring existing patient session:", currentPatient);
+
+        socket.emit("patient:restore", {
+          patient: currentPatient,
+          status: currentStatus,
+        });
+
+        io.emit("patient:status", {
+          status: currentStatus,
+        });
+
+        return;
+      }
+
+      // New patient session.
+      currentPatient = null;
+      currentStatus = "actively-filling";
+
+      socket.emit("patient:restore", {
+        patient: null,
+        status: currentStatus,
+      });
+
+      io.emit("patient:status", {
+        status: currentStatus,
+      });
+    },
+  );
 
   socket.on("patient:update", (patient: Patient) => {
     if (socket.id !== patientSocketId) {
@@ -65,44 +106,65 @@ io.on("connection", (socket) => {
   });
 
   socket.on("staff:join", () => {
-  console.log(`Staff joined: ${socket.id}`);
+    console.log(`Staff joined: ${socket.id}`);
 
-  if (currentPatient) {
-    console.log("Sending current patient to staff:", currentPatient);
-    socket.emit("patient:update", currentPatient);
-  }
+    if (currentPatient) {
+      console.log("Sending current patient to staff:", currentPatient);
 
-  socket.emit("patient:status", {
-    status: patientSocketId ? currentStatus : "inactive",
+      socket.emit("patient:update", currentPatient);
+    }
+
+    socket.emit("patient:status", {
+      status: patientSocketId ? currentStatus : "inactive",
+    });
+
+    console.log("Sending last patient to staff:", lastPatient);
+
+    socket.emit("patient:last", lastPatient);
   });
-
-  console.log("Sending last patient to staff:", lastPatient);
-  socket.emit("patient:last", lastPatient);
-});
 
   socket.on("disconnect", (reason) => {
     console.log(
       `Socket client disconnected: ${socket.id} (${reason})`,
     );
 
-    if (socket.id === patientSocketId) {
-  if (currentPatient) {
-  lastPatient = currentPatient;
-  console.log("Saved last patient:", lastPatient);
-}
+    if (socket.id !== patientSocketId) {
+      return;
+    }
 
-patientSocketId = null;
-currentPatient = null;
-currentStatus = "inactive";
+    /*
+     * Do not immediately clear the patient.
+     *
+     * A browser refresh causes:
+     * old socket disconnect
+     * ↓
+     * new socket connect
+     *
+     * Give the same Patient session a short window to reconnect.
+     */
+    disconnectTimer = setTimeout(() => {
+      console.log("Patient session ended.");
 
-io.emit("patient:status", {
-  status: currentStatus,
-});
+      if (currentPatient) {
+        lastPatient = currentPatient;
 
-io.emit("patient:current", null);
+        console.log("Saved last patient:", lastPatient);
+      }
 
-io.emit("patient:last", lastPatient);
-}
+      patientSocketId = null;
+      patientSessionId = null;
+      currentPatient = null;
+      currentStatus = "inactive";
+
+      io.emit("patient:status", {
+        status: currentStatus,
+      });
+
+      io.emit("patient:current", null);
+      io.emit("patient:last", lastPatient);
+
+      disconnectTimer = null;
+    }, 3000);
   });
 });
 

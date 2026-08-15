@@ -149,7 +149,18 @@ function FormField({
 
 const inputClassName =
   "w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-slate-900 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-sky-600 focus:ring-3 focus:ring-sky-100";
+function getPatientSessionId() {
+  const storageKey = "agnos-patient-session-id";
 
+  let sessionId = sessionStorage.getItem(storageKey);
+
+  if (!sessionId) {
+    sessionId = crypto.randomUUID();
+    sessionStorage.setItem(storageKey, sessionId);
+  }
+
+  return sessionId;
+}
 export default function PatientPage() {
   const [patient, setPatient] = useState<Patient>(initialPatient);
   const [errors, setErrors] = useState<FormErrors>({});
@@ -158,49 +169,71 @@ export default function PatientPage() {
   const [connectionStatus, setConnectionStatus] =
     useState<ConnectionState>("connecting");
   const [submitError, setSubmitError] = useState("");
+  const [isPatientRestored, setIsPatientRestored] = useState(false);
 
   useEffect(() => {
+  const sessionId = getPatientSessionId();
+
   function handleConnect() {
     setIsSocketConnected(true);
     setConnectionStatus("connected");
-    socket.emit("patient:join");
+
+    socket.emit("patient:join", sessionId);
   }
 
-function handleDisconnect() {
-  setIsSocketConnected(false);
-  setConnectionStatus("disconnected");
+  function handleDisconnect() {
+    setIsSocketConnected(false);
+    setConnectionStatus("disconnected");
+  }
+
+  function handleConnectError() {
+    setIsSocketConnected(false);
+    setConnectionStatus("disconnected");
+  }
+
+  function handlePatientRestore({
+  patient: restoredPatient,
+  status,
+}: {
+  patient: Patient | null;
+  status: "inactive" | "actively-filling" | "submitted";
+}) {
+  if (restoredPatient) {
+    setPatient(restoredPatient);
+  }
+
+  setIsSubmitted(status === "submitted");
+  setIsPatientRestored(true);
 }
 
-function handleConnectError() {
-  setIsSocketConnected(false);
-  setConnectionStatus("disconnected");
-}
+  socket.on("connect", handleConnect);
+  socket.on("disconnect", handleDisconnect);
+  socket.on("connect_error", handleConnectError);
+  socket.on("patient:restore", handlePatientRestore);
 
-    socket.on("connect", handleConnect);
-socket.on("disconnect", handleDisconnect);
-socket.on("connect_error", handleConnectError);
+  if (socket.connected) {
+    handleConnect();
+  } else {
+    socket.connect();
+  }
 
-    if (socket.connected) {
-      handleConnect();
-    } else {
-      socket.connect();
-    }
+  return () => {
+    socket.off("connect", handleConnect);
+    socket.off("disconnect", handleDisconnect);
+    socket.off("connect_error", handleConnectError);
+    socket.off("patient:restore", handlePatientRestore);
 
-    return () => {
-      socket.off("connect", handleConnect);
-      socket.off("disconnect", handleDisconnect);
-      socket.off("connect_error", handleConnectError);
-      socket.disconnect();
-    };
-  }, []);
+    socket.disconnect();
+  };
+}, []);
 
   useEffect(() => {
-    if (!isSocketConnected) {
-      return;
-    }
+  if (!isSocketConnected || !isPatientRestored || isSubmitted) {
+    return;
+  }
 
-    socket.emit("patient:update", patient);
-  }, [isSocketConnected, patient]);
+  socket.emit("patient:update", patient);
+}, [isSocketConnected, isPatientRestored, isSubmitted, patient]);
 
   function updateField(field: PatientField, value: string) {
     setPatient((currentPatient) => ({
