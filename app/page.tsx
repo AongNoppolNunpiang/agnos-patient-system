@@ -27,61 +27,54 @@ export default function Home() {
           {/* Patient */}
           <Link
             href="/patient"
-            className="group rounded-3xl border border-[#D5E5E1] bg-[#FCFAF6] p-7 shadow-sm transition duration-200 hover:-translate-y-1 hover:border-[#9BC2BB] hover:shadow-lg focus:outline-none focus:ring-4 focus:ring-[#B8D8D2] sm:p-9"
-          >
-            <div className="flex h-full flex-col">
-              <div className="mt-4">
-                <p className="font-mono text-xs font-semibold uppercase tracking-[0.16em] text-[#6B8984]">
-                  Patient
-                </p>
+className="group flex h-[300px] flex-col rounded-3xl border border-[#D5E5E1] bg-[#FCFAF6] p-7 shadow-sm transition duration-200 hover:-translate-y-1 hover:border-[#9BC2BB] hover:shadow-lg focus:outline-none focus:ring-4 focus:ring-[#B8D8D2] sm:p-9"          >
+            <div className="mt-4 flex flex-1 flex-col">
+  <p className="font-mono text-xs font-semibold uppercase tracking-[0.16em] text-[#6B8984]">
+    Patient
+  </p>
 
-                <h2 className="mt-2 text-2xl font-semibold text-[#163B37]">
-                  Fill out your information
-                </h2>
+  <h2 className="mt-2 text-2xl font-semibold text-[#163B37]">
+    Fill out your information
+  </h2>
 
-                <p className="mt-3 text-base leading-7 text-[#58706C]">
-                  Complete your patient information through a simple
-                  step-by-step form.
-                </p>
-              </div>
+  <p className="mt-3 text-base leading-7 text-[#58706C]">
+    Complete your patient information through a simple step-by-step form.
+  </p>
 
-              <div className="mt-8 flex items-center gap-2 text-sm font-semibold text-[#0B4F49]">
-                Continue as patient
-                <span className="transition-transform duration-200 group-hover:translate-x-1">
-                  →
-                </span>
-              </div>
-            </div>
+  <div className="mt-auto pt-8 flex items-center gap-2 text-sm font-semibold text-[#0B4F49]">
+    Continue as patient
+    <span className="transition-transform duration-200 group-hover:translate-x-1">
+      →
+    </span>
+  </div>
+</div>
           </Link>
 
           {/* Staff */}
           <Link
             href="/staff"
-            className="group rounded-3xl border border-[#D5E5E1] bg-[#FCFAF6] p-7 shadow-sm transition duration-200 hover:-translate-y-1 hover:border-[#9BC2BB] hover:shadow-lg focus:outline-none focus:ring-4 focus:ring-[#B8D8D2] sm:p-9"
+            className="group flex h-[300px] flex-col rounded-3xl border border-[#D5E5E1] bg-[#FCFAF6] p-7 shadow-sm transition duration-200 hover:-translate-y-1 hover:border-[#9BC2BB] hover:shadow-lg focus:outline-none focus:ring-4 focus:ring-[#B8D8D2] sm:p-9"
           >
-            <div className="flex h-full flex-col">
-              <div className="mt-4">
-                <p className="font-mono text-xs font-semibold uppercase tracking-[0.16em] text-[#6B8984]">
-                  Staff
-                </p>
+            <div className="mt-4 flex flex-1 flex-col">
+  <p className="font-mono text-xs font-semibold uppercase tracking-[0.16em] text-[#6B8984]">
+    Staff
+  </p>
 
-                <h2 className="mt-2 text-2xl font-semibold text-[#163B37]">
-                  Monitor patient information
-                </h2>
+  <h2 className="mt-2 text-2xl font-semibold text-[#163B37]">
+    Monitor patient information
+  </h2>
 
-                <p className="mt-3 text-base leading-7 text-[#58706C]">
-                  View the current patient and monitor information in
-                  real time.
-                </p>
-              </div>
+  <p className="mt-3 text-base leading-7 text-[#58706C]">
+    View the current patient and monitor information in real time.
+  </p>
 
-              <div className="mt-8 flex items-center gap-2 text-sm font-semibold text-[#0B4F49]">
-                Continue as staff
-                <span className="transition-transform duration-200 group-hover:translate-x-1">
-                  →
-                </span>
-              </div>
-            </div>
+  <div className="mt-auto pt-8 flex items-center gap-2 text-sm font-semibold text-[#0B4F49]">
+    Continue as staff
+    <span className="transition-transform duration-200 group-hover:translate-x-1">
+      →
+    </span>
+  </div>
+</div>
           </Link>
         </section>
 
