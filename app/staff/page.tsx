@@ -12,6 +12,10 @@ import {
 } from "../../components/staff/patient-status";
 import { socket } from "../../lib/socket";
 import type { Patient } from "../../types/patient";
+import {
+  ConnectionStatus,
+  type ConnectionState,
+} from "../../components/connection-status";
 
 const initialPatient: Patient = {
   firstName: "",
@@ -58,8 +62,22 @@ function formatGender(gender: string) {
 export default function StaffPage() {
   const [patient, setPatient] = useState<Patient>(initialPatient);
   const [status, setStatus] = useState<PatientStatusType>(initialStatus);
-
+  const [connectionStatus, setConnectionStatus] =
+  useState<ConnectionState>("connecting");
   useEffect(() => {
+  const handleConnect = () => {
+    setConnectionStatus("connected");
+    socket.emit("staff:join");
+  };
+
+  const handleDisconnect = () => {
+    setConnectionStatus("disconnected");
+  };
+
+  const handleConnectError = () => {
+    setConnectionStatus("disconnected");
+  };
+
   const handlePatientUpdate = (updatedPatient: Patient) => {
     setPatient(updatedPatient);
   };
@@ -72,13 +90,11 @@ export default function StaffPage() {
     setStatus(nextStatus);
   };
 
-  const handleConnect = () => {
-    socket.emit("staff:join");
-  };
-
   socket.on("patient:update", handlePatientUpdate);
   socket.on("patient:status", handlePatientStatus);
   socket.on("connect", handleConnect);
+  socket.on("disconnect", handleDisconnect);
+  socket.on("connect_error", handleConnectError);
 
   if (socket.connected) {
     handleConnect();
@@ -90,6 +106,8 @@ export default function StaffPage() {
     socket.off("patient:update", handlePatientUpdate);
     socket.off("patient:status", handlePatientStatus);
     socket.off("connect", handleConnect);
+    socket.off("disconnect", handleDisconnect);
+    socket.off("connect_error", handleConnectError);
     socket.disconnect();
   };
 }, []);
@@ -181,6 +199,9 @@ export default function StaffPage() {
           <p className="mt-3 max-w-2xl text-base leading-7 text-slate-600">
             Review the latest patient information. This view is read-only.
           </p>
+          <div className="mt-3">
+  <ConnectionStatus status={connectionStatus} />
+</div>
         </header>
 
         <section

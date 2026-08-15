@@ -3,7 +3,10 @@
 import { type FormEvent, type ReactNode, useEffect, useState } from "react";
 import { socket } from "../../lib/socket";
 import type { Patient } from "../../types/patient";
-
+import {
+  ConnectionStatus,
+  type ConnectionState,
+} from "../../components/connection-status";
 type FormErrors = Partial<Record<keyof Patient, string>>;
 
 type PatientField = Exclude<keyof Patient, "emergencyContact">;
@@ -152,19 +155,29 @@ export default function PatientPage() {
   const [errors, setErrors] = useState<FormErrors>({});
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isSocketConnected, setIsSocketConnected] = useState(false);
+  const [connectionStatus, setConnectionStatus] =
+    useState<ConnectionState>("connecting");
 
   useEffect(() => {
-    function handleConnect() {
-      setIsSocketConnected(true);
-      socket.emit("patient:join");
-    }
+  function handleConnect() {
+    setIsSocketConnected(true);
+    setConnectionStatus("connected");
+    socket.emit("patient:join");
+  }
 
-    function handleDisconnect() {
-      setIsSocketConnected(false);
-    }
+function handleDisconnect() {
+  setIsSocketConnected(false);
+  setConnectionStatus("disconnected");
+}
+
+function handleConnectError() {
+  setIsSocketConnected(false);
+  setConnectionStatus("disconnected");
+}
 
     socket.on("connect", handleConnect);
-    socket.on("disconnect", handleDisconnect);
+socket.on("disconnect", handleDisconnect);
+socket.on("connect_error", handleConnectError);
 
     if (socket.connected) {
       handleConnect();
@@ -175,6 +188,7 @@ export default function PatientPage() {
     return () => {
       socket.off("connect", handleConnect);
       socket.off("disconnect", handleDisconnect);
+      socket.off("connect_error", handleConnectError);
       socket.disconnect();
     };
   }, []);
@@ -244,6 +258,9 @@ export default function PatientPage() {
             Please provide your information below. Fields marked as required are
             needed to complete the form.
           </p>
+          <div className="mt-3">
+  <ConnectionStatus status={connectionStatus} />
+</div>
         </header>
 
         <form
