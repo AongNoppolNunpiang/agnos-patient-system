@@ -1,3 +1,7 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+
 import {
   PatientInformationSection,
   type InformationItem,
@@ -6,29 +10,34 @@ import {
   PatientStatus,
   type PatientStatusType,
 } from "../../components/staff/patient-status";
+import { socket } from "../../lib/socket";
 import type { Patient } from "../../types/patient";
 
-const mockPatient: Patient = {
-  firstName: "Maya",
-  middleName: "Lin",
-  lastName: "Chen",
-  dateOfBirth: "1996-03-18",
-  gender: "female",
-  phoneNumber: "+66 81 234 5678",
-  email: "maya.chen@example.com",
-  address: "88 Sukhumvit Road, Watthana, Bangkok 10110",
-  preferredLanguage: "Thai",
-  nationality: "Thai",
-  religion: "Buddhist",
+const initialPatient: Patient = {
+  firstName: "",
+  middleName: "",
+  lastName: "",
+  dateOfBirth: "",
+  gender: "",
+  phoneNumber: "",
+  email: "",
+  address: "",
+  preferredLanguage: "",
+  nationality: "",
   emergencyContact: {
-    name: "David Chen",
-    relationship: "Parent",
+    name: "",
+    relationship: "",
   },
+  religion: "",
 };
 
-const mockStatus: PatientStatusType = "actively-filling";
+const initialStatus: PatientStatusType = "inactive";
 
 function formatDate(date: string) {
+  if (!date) {
+    return "Not provided";
+  }
+
   return new Intl.DateTimeFormat("en", {
     day: "numeric",
     month: "long",
@@ -37,39 +46,118 @@ function formatDate(date: string) {
 }
 
 function formatGender(gender: string) {
-  return gender.replace(/-/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
+  if (!gender) {
+    return "Not provided";
+  }
+
+  return gender
+    .replace(/-/g, " ")
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
-const personalInformation: InformationItem[] = [
-  { label: "First name", value: mockPatient.firstName },
-  { label: "Middle name", value: mockPatient.middleName },
-  { label: "Last name", value: mockPatient.lastName },
-  { label: "Date of birth", value: formatDate(mockPatient.dateOfBirth) },
-  { label: "Gender", value: formatGender(mockPatient.gender) },
-];
-
-const contactInformation: InformationItem[] = [
-  { label: "Phone number", value: mockPatient.phoneNumber },
-  { label: "Email", value: mockPatient.email },
-  {
-    label: "Address",
-    value: mockPatient.address,
-    className: "md:col-span-2",
-  },
-];
-
-const additionalInformation: InformationItem[] = [
-  { label: "Preferred language", value: mockPatient.preferredLanguage },
-  { label: "Nationality", value: mockPatient.nationality },
-  { label: "Religion", value: mockPatient.religion },
-];
-
-const emergencyContact: InformationItem[] = [
-  { label: "Name", value: mockPatient.emergencyContact?.name },
-  { label: "Relationship", value: mockPatient.emergencyContact?.relationship },
-];
-
 export default function StaffPage() {
+  const [patient, setPatient] = useState<Patient>(initialPatient);
+  const [status, setStatus] = useState<PatientStatusType>(initialStatus);
+
+  useEffect(() => {
+    const handlePatientUpdate = (updatedPatient: Patient) => {
+      setPatient(updatedPatient);
+    };
+
+    const handlePatientStatus = ({
+      status: nextStatus,
+    }: {
+      status: PatientStatusType;
+    }) => {
+      setStatus(nextStatus);
+    };
+
+    socket.on("patient:update", handlePatientUpdate);
+    socket.on("patient:status", handlePatientStatus);
+
+    if (!socket.connected) {
+      socket.connect();
+    }
+
+    return () => {
+      socket.off("patient:update", handlePatientUpdate);
+      socket.off("patient:status", handlePatientStatus);
+      socket.disconnect();
+    };
+  }, []);
+
+  const personalInformation = useMemo<InformationItem[]>(
+    () => [
+      { label: "First name", value: patient.firstName },
+      { label: "Middle name", value: patient.middleName },
+      { label: "Last name", value: patient.lastName },
+      {
+        label: "Date of birth",
+        value: formatDate(patient.dateOfBirth),
+      },
+      {
+        label: "Gender",
+        value: formatGender(patient.gender),
+      },
+    ],
+    [patient],
+  );
+
+  const contactInformation = useMemo<InformationItem[]>(
+    () => [
+      {
+        label: "Phone number",
+        value: patient.phoneNumber,
+      },
+      {
+        label: "Email",
+        value: patient.email,
+      },
+      {
+        label: "Address",
+        value: patient.address,
+        className: "md:col-span-2",
+      },
+    ],
+    [patient],
+  );
+
+  const additionalInformation = useMemo<InformationItem[]>(
+    () => [
+      {
+        label: "Preferred language",
+        value: patient.preferredLanguage,
+      },
+      {
+        label: "Nationality",
+        value: patient.nationality,
+      },
+      {
+        label: "Religion",
+        value: patient.religion,
+      },
+    ],
+    [patient],
+  );
+
+  const emergencyContact = useMemo<InformationItem[]>(
+    () => [
+      {
+        label: "Name",
+        value: patient.emergencyContact?.name,
+      },
+      {
+        label: "Relationship",
+        value: patient.emergencyContact?.relationship,
+      },
+    ],
+    [patient],
+  );
+
+  const patientName =
+    [patient.firstName, patient.lastName].filter(Boolean).join(" ") ||
+    "No patient connected";
+
   return (
     <main className="min-h-screen bg-slate-50 px-4 py-8 sm:px-6 lg:px-8 lg:py-12">
       <div className="mx-auto max-w-4xl">
@@ -77,9 +165,11 @@ export default function StaffPage() {
           <p className="text-sm font-semibold tracking-wide text-sky-700">
             AGNOS PATIENT SYSTEM
           </p>
+
           <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950 sm:text-4xl">
             Staff view
           </h1>
+
           <p className="mt-3 max-w-2xl text-base leading-7 text-slate-600">
             Review the latest patient information. This view is read-only.
           </p>
@@ -97,11 +187,13 @@ export default function StaffPage() {
               >
                 Current patient status
               </h2>
+
               <p className="mt-1 text-sm text-slate-600">
-                {mockPatient.firstName} {mockPatient.lastName}
+                {patientName}
               </p>
             </div>
-            <PatientStatus status={mockStatus} />
+
+            <PatientStatus status={status} />
           </div>
         </section>
 
@@ -111,16 +203,19 @@ export default function StaffPage() {
             title="Personal information"
             items={personalInformation}
           />
+
           <PatientInformationSection
             id="contact-information"
             title="Contact information"
             items={contactInformation}
           />
+
           <PatientInformationSection
             id="additional-information"
             title="Additional information"
             items={additionalInformation}
           />
+
           <PatientInformationSection
             id="emergency-contact"
             title="Emergency contact"

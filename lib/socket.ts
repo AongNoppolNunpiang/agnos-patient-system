@@ -1,4 +1,5 @@
-// Placeholder for future real-time communication.
-// Socket.IO or another real-time solution will be added later.
+import { io } from "socket.io-client";
 
-export {};
+export const socket = io("http://localhost:3001", {
+  autoConnect: false,
+});

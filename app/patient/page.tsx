@@ -1,6 +1,7 @@
 "use client";
 
-import { type FormEvent, type ReactNode, useState } from "react";
+import { type FormEvent, type ReactNode, useEffect, useState } from "react";
+import { socket } from "../../lib/socket";
 import type { Patient } from "../../types/patient";
 
 type FormErrors = Partial<Record<keyof Patient, string>>;
@@ -150,6 +151,41 @@ export default function PatientPage() {
   const [patient, setPatient] = useState<Patient>(initialPatient);
   const [errors, setErrors] = useState<FormErrors>({});
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [isSocketConnected, setIsSocketConnected] = useState(false);
+
+  useEffect(() => {
+    function handleConnect() {
+      setIsSocketConnected(true);
+      socket.emit("patient:join");
+    }
+
+    function handleDisconnect() {
+      setIsSocketConnected(false);
+    }
+
+    socket.on("connect", handleConnect);
+    socket.on("disconnect", handleDisconnect);
+
+    if (socket.connected) {
+      handleConnect();
+    } else {
+      socket.connect();
+    }
+
+    return () => {
+      socket.off("connect", handleConnect);
+      socket.off("disconnect", handleDisconnect);
+      socket.disconnect();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isSocketConnected) {
+      return;
+    }
+
+    socket.emit("patient:update", patient);
+  }, [isSocketConnected, patient]);
 
   function updateField(field: PatientField, value: string) {
     setPatient((currentPatient) => ({
@@ -185,7 +221,13 @@ export default function PatientPage() {
 
     const validationErrors = validatePatient(patient);
     setErrors(validationErrors);
-    setIsSubmitted(Object.keys(validationErrors).length === 0);
+
+    const isValid = Object.keys(validationErrors).length === 0;
+    setIsSubmitted(isValid);
+
+    if (isValid && isSocketConnected) {
+      socket.emit("patient:submit", patient);
+    }
   }
 
   return (
