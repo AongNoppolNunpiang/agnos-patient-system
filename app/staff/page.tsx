@@ -19,6 +19,17 @@ import {
 
 const initialStatus: PatientStatusType = "inactive";
 
+const TOKENS = {
+  ink: "#12312B",
+  inkSoft: "#4B615C",
+  tealDeep: "#0B4F49",
+  tealMid: "#1C7A70",
+  mintPale: "#EFF6F3",
+  paper: "#FCFAF6",
+  line: "#DDE7E2",
+  lineStrong: "#C7D6D0",
+};
+
 function formatDate(date: string) {
   if (!date) {
     return "Not provided";
@@ -200,18 +211,41 @@ export default function StaffPage() {
       .join(" ") || "No patient connected";
 
   return (
-    <main className="min-h-screen bg-slate-50 px-4 py-8 sm:px-6 lg:px-8 lg:py-12">
+    <main
+      className="min-h-screen px-4 py-8 sm:px-6 lg:px-8 lg:py-12"
+      style={{
+        backgroundColor: TOKENS.mintPale,
+        color: TOKENS.ink,
+        fontFamily: "'IBM Plex Sans Thai', system-ui, sans-serif",
+      }}
+    >
+      <style jsx global>{`
+        @import url("https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap");
+      `}</style>
+
       <div className="mx-auto max-w-4xl">
         <header className="mb-8">
-          <p className="text-sm font-semibold tracking-wide text-sky-700">
+          <p
+            className="text-sm font-semibold tracking-[0.12em]"
+            style={{ color: TOKENS.tealDeep }}
+          >
             AGNOS PATIENT SYSTEM
           </p>
 
-          <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950 sm:text-4xl">
+          <h1
+            className="mt-2 text-3xl font-semibold tracking-tight sm:text-4xl"
+            style={{
+              color: TOKENS.ink,
+              fontFamily: "'Fraunces', Georgia, serif",
+            }}
+          >
             Staff view
           </h1>
 
-          <p className="mt-3 max-w-2xl text-base leading-7 text-slate-600">
+          <p
+            className="mt-3 max-w-2xl text-base leading-7"
+            style={{ color: TOKENS.inkSoft }}
+          >
             Review the latest patient information. This view is read-only.
           </p>
 
@@ -222,31 +256,51 @@ export default function StaffPage() {
 
         <section
           aria-labelledby="patient-status-heading"
-          className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6"
+          className="rounded-2xl border p-5 shadow-sm sm:p-6"
+          style={{
+            borderColor: TOKENS.line,
+            backgroundColor: TOKENS.paper,
+          }}
         >
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h2
                 id="patient-status-heading"
-                className="text-lg font-semibold text-slate-900"
+                className="text-lg font-semibold"
+                style={{ color: TOKENS.ink }}
               >
                 {viewingLastPatient
                   ? "Last patient information"
                   : "Current patient status"}
               </h2>
 
-              <p className="mt-1 text-sm text-slate-600">
+              <p
+                className="mt-1 text-sm"
+                style={{ color: TOKENS.inkSoft }}
+              >
                 {patientName}
               </p>
             </div>
 
             {viewingLastPatient ? (
-              <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
-                <p className="text-sm font-semibold text-slate-700">
+              <div
+                className="rounded-xl border px-4 py-3"
+                style={{
+                  borderColor: TOKENS.line,
+                  backgroundColor: TOKENS.mintPale,
+                }}
+              >
+                <p
+                  className="text-sm font-semibold"
+                  style={{ color: TOKENS.ink }}
+                >
                   Previous patient
                 </p>
 
-                <p className="mt-0.5 text-xs text-slate-500">
+                <p
+                  className="mt-0.5 text-xs"
+                  style={{ color: TOKENS.inkSoft }}
+                >
                   This is the most recently completed patient session.
                 </p>
               </div>
@@ -257,20 +311,42 @@ export default function StaffPage() {
         </section>
 
         {lastPatient && !viewingLastPatient ? (
-  <button
-    type="button"
-    onClick={() => setViewingLastPatient(true)}
-    className="mt-4 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
-  >
-    View last patient information
-  </button>
-) : null}
+          <button
+            type="button"
+            onClick={() => setViewingLastPatient(true)}
+            className="mt-4 rounded-xl border-2 px-4 py-2 text-sm font-medium transition"
+            style={{
+              borderColor: TOKENS.lineStrong,
+              backgroundColor: TOKENS.paper,
+              color: TOKENS.tealDeep,
+            }}
+            onMouseEnter={(event) => {
+              event.currentTarget.style.backgroundColor = TOKENS.mintPale;
+            }}
+            onMouseLeave={(event) => {
+              event.currentTarget.style.backgroundColor = TOKENS.paper;
+            }}
+          >
+            View last patient information
+          </button>
+        ) : null}
 
         {viewingLastPatient ? (
           <button
             type="button"
             onClick={() => setViewingLastPatient(false)}
-            className="mt-4 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+            className="mt-4 rounded-xl border-2 px-4 py-2 text-sm font-medium transition"
+            style={{
+              borderColor: TOKENS.lineStrong,
+              backgroundColor: TOKENS.paper,
+              color: TOKENS.tealDeep,
+            }}
+            onMouseEnter={(event) => {
+              event.currentTarget.style.backgroundColor = TOKENS.mintPale;
+            }}
+            onMouseLeave={(event) => {
+              event.currentTarget.style.backgroundColor = TOKENS.paper;
+            }}
           >
             Back to current patient
           </button>
