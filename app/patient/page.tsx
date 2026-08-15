@@ -170,7 +170,19 @@ export default function PatientPage() {
     useState<ConnectionState>("connecting");
   const [submitError, setSubmitError] = useState("");
   const [isPatientRestored, setIsPatientRestored] = useState(false);
+  const handleNewForm = () => {
+  const newSessionId = crypto.randomUUID();
 
+  sessionStorage.setItem("agnos-patient-session-id", newSessionId);
+
+  setPatient(initialPatient);
+  setErrors({});
+  setSubmitError("");
+  setIsSubmitted(false);
+  setIsPatientRestored(true);
+
+  socket.emit("patient:new-session", newSessionId);
+};
   useEffect(() => {
   const sessionId = getPatientSessionId();
 
@@ -190,7 +202,7 @@ export default function PatientPage() {
     setIsSocketConnected(false);
     setConnectionStatus("disconnected");
   }
-
+  
   function handlePatientRestore({
   patient: restoredPatient,
   status,
@@ -670,6 +682,15 @@ export default function PatientPage() {
             Your information has been submitted successfully.
             You can no longer edit this form.
           </p>
+          {isSubmitted && (
+  <button
+    type="button"
+    onClick={handleNewForm}
+    className="rounded-lg bg-sky-600 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-700"
+  >
+    Fill out a new form
+  </button>
+)}
         </div>
       </div>
     </div>

@@ -123,6 +123,51 @@ io.on("connection", (socket) => {
     socket.emit("patient:last", lastPatient);
   });
 
+socket.on(
+  "patient:new-session",
+  (sessionId: string) => {
+    if (socket.id !== patientSocketId) {
+      return;
+    }
+
+    // เก็บคนปัจจุบันไว้เป็น Last Patient
+    if (currentPatient) {
+      lastPatient = currentPatient;
+
+      console.log("Saved last patient:", lastPatient);
+    }
+
+    // เริ่ม session ใหม่
+    patientSessionId = sessionId;
+    currentPatient = null;
+    currentStatus = "actively-filling";
+
+    console.log(
+      `Patient started a new session: ${socket.id}`,
+    );
+    console.log(
+      `New patient session: ${sessionId}`,
+    );
+
+    // Patient ตัวใหม่ยังไม่มีข้อมูล
+    socket.emit("patient:restore", {
+      patient: null,
+      status: currentStatus,
+    });
+
+    // Staff กลับไป Current Patient
+    io.emit("patient:current", null);
+
+    // Staff สามารถดูคนก่อนหน้าได้ทันที
+    io.emit("patient:last", lastPatient);
+
+    // Current status เป็น actively filling
+    io.emit("patient:status", {
+      status: currentStatus,
+    });
+  },
+);
+
   socket.on("disconnect", (reason) => {
     console.log(
       `Socket client disconnected: ${socket.id} (${reason})`,
@@ -167,7 +212,6 @@ io.on("connection", (socket) => {
     }, 3000);
   });
 });
-
 httpServer.listen(PORT, () => {
   console.log(
     `Socket.IO server listening on http://localhost:${PORT}`,
