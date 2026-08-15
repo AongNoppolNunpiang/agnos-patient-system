@@ -1,5 +1,6 @@
 import { createServer } from "node:http";
 import { Server } from "socket.io";
+import type { Patient } from "../types/patient";
 
 const PORT = 3001;
 
@@ -12,53 +13,83 @@ const io = new Server(httpServer, {
 });
 
 let patientSocketId: string | null = null;
+let currentPatient: Patient | null = null;
+let currentStatus: "inactive" | "actively-filling" | "submitted" =
+  "inactive";
 
 io.on("connection", (socket) => {
   console.log(`Socket client connected: ${socket.id}`);
 
   socket.on("patient:join", () => {
     patientSocketId = socket.id;
+    currentStatus = "actively-filling";
 
     console.log(`Patient joined: ${socket.id}`);
 
     io.emit("patient:status", {
-      status: "actively-filling",
+      status: currentStatus,
     });
   });
 
-  socket.on("patient:update", (patient) => {
+  socket.on("patient:update", (patient: Patient) => {
+    if (socket.id !== patientSocketId) {
+      return;
+    }
+
+    currentPatient = patient;
+
     console.log(`Patient update received from ${socket.id}:`, patient);
 
-    // Send the latest patient data to everyone except the sender.
     socket.broadcast.emit("patient:update", patient);
   });
 
-  socket.on("patient:submit", (patient) => {
+  socket.on("patient:submit", (patient: Patient) => {
+    if (socket.id !== patientSocketId) {
+      return;
+    }
+
+    currentPatient = patient;
+    currentStatus = "submitted";
+
     console.log(`Patient submitted from ${socket.id}:`, patient);
 
-    // Make sure Staff receives the final patient data.
     socket.broadcast.emit("patient:update", patient);
 
-    // Update Staff status.
     socket.broadcast.emit("patient:status", {
-      status: "submitted",
+      status: currentStatus,
+    });
+  });
+
+  socket.on("staff:join", () => {
+    console.log(`Staff joined: ${socket.id}`);
+
+    if (currentPatient) {
+      socket.emit("patient:update", currentPatient);
+    }
+
+    socket.emit("patient:status", {
+      status: patientSocketId ? currentStatus : "inactive",
     });
   });
 
   socket.on("disconnect", (reason) => {
-    console.log(`Socket client disconnected: ${socket.id} (${reason})`);
+    console.log(
+      `Socket client disconnected: ${socket.id} (${reason})`,
+    );
 
-    // Only the Patient disconnect should change Patient status.
     if (socket.id === patientSocketId) {
       patientSocketId = null;
+      currentStatus = "inactive";
 
       io.emit("patient:status", {
-        status: "inactive",
+        status: currentStatus,
       });
     }
   });
 });
 
 httpServer.listen(PORT, () => {
-  console.log(`Socket.IO server listening on http://localhost:${PORT}`);
+  console.log(
+    `Socket.IO server listening on http://localhost:${PORT}`,
+  );
 });

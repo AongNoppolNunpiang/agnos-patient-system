@@ -60,31 +60,39 @@ export default function StaffPage() {
   const [status, setStatus] = useState<PatientStatusType>(initialStatus);
 
   useEffect(() => {
-    const handlePatientUpdate = (updatedPatient: Patient) => {
-      setPatient(updatedPatient);
-    };
+  const handlePatientUpdate = (updatedPatient: Patient) => {
+    setPatient(updatedPatient);
+  };
 
-    const handlePatientStatus = ({
-      status: nextStatus,
-    }: {
-      status: PatientStatusType;
-    }) => {
-      setStatus(nextStatus);
-    };
+  const handlePatientStatus = ({
+    status: nextStatus,
+  }: {
+    status: PatientStatusType;
+  }) => {
+    setStatus(nextStatus);
+  };
 
-    socket.on("patient:update", handlePatientUpdate);
-    socket.on("patient:status", handlePatientStatus);
+  const handleConnect = () => {
+    socket.emit("staff:join");
+  };
 
-    if (!socket.connected) {
-      socket.connect();
-    }
+  socket.on("patient:update", handlePatientUpdate);
+  socket.on("patient:status", handlePatientStatus);
+  socket.on("connect", handleConnect);
 
-    return () => {
-      socket.off("patient:update", handlePatientUpdate);
-      socket.off("patient:status", handlePatientStatus);
-      socket.disconnect();
-    };
-  }, []);
+  if (socket.connected) {
+    handleConnect();
+  } else {
+    socket.connect();
+  }
+
+  return () => {
+    socket.off("patient:update", handlePatientUpdate);
+    socket.off("patient:status", handlePatientStatus);
+    socket.off("connect", handleConnect);
+    socket.disconnect();
+  };
+}, []);
 
   const personalInformation = useMemo<InformationItem[]>(
     () => [
